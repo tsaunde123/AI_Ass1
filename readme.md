@@ -118,7 +118,7 @@ Answer example: `q3([n,e,s,w]).`
 #### Part B: Visualising search ####
 A path is a sequence of adjacent positions representing how the agent moves in the world.  
 
-**Q4.** [8 marks] Run the query `?-next(L).`
+**Q4.** [8 marks] Run the query `?-next(L).`  
 **Q4a.** [2 marks] At some point the agent finds itself at a dead end and starts backtracking. What is the path from the starting position right until the first dead end, just before the agent starts backtracking? (make sure you give the whole path in the correct order in your answer)
 
 Answer example: `q4a([p(1, 1), p(1, 2), p(1, 3)]).`
