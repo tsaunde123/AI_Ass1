@@ -4,22 +4,21 @@
  *		assignment-specific program NOT to be edited by students.
  */
 
-
 :- module(assignment1_module,
     [ ailp_show_move/2,      % +Old_pos, +New_pos
       ailp_start_position/1, % binds with starting position p(X,Y)
-      ailp_show_complete/0,
+      ailp_show_complete/0,  %
       ailp_grid_size/1,      % -Size
-      reset/0,
       complete/1,            % from assignment1.pl
       new_pos/3,             % from assignment1.pl
       m/1,                   % from assignment1.pl
       next/1,                % from assignment1.pl
+      reset/0,               % re-exported from command_channel.pl
       start/0,               % re-exported from command_channel.pl
       stop/0                 % re-exported from command_channel.pl
     ]).
 
-:- use_module('../../command_channel').
+:- use_module('../command_channel').
 
 :- set_homepage('mower.html').
 
@@ -29,14 +28,16 @@
 % 	[AgentId, go, Dir]
 % 	[AgentId, move, X,Y]
 % 	[AgentId, colour, X,Y,Colour]
-% 	[god, reset, Initial_state]		// asserted by reset/0 to initialise game world in web page
+% 	[god, reset, Initial_state] // asserted by reset/0 to initialise game world
+%                               // in web page
 
 ailp_show_move(p(X0,Y0),p(X1,Y1)) :-
 	do_command([mower, colour, X0, Y0, lighter]),
 	do_command([mower, colour, X1, Y1, lighter]),
 	do_command([mower, move, X1, Y1], _Result).
 	%% term_to_atom(Result, A), do_command([mower, console, A]).
-	%	could succeed or fail here depending on legality of attempted move (indciated by 'fail= @true' in R)
+	%	could succeed or fail here depending on legality of attempted move
+  %   (indciated by 'fail= @true' in R)
 
 ailp_show_complete :-
 	do_command([mower, say, 'Finished!'], _R).
@@ -54,14 +55,12 @@ start_position(p(1,1)).
 % X position is mod(candidatenumber/gridwidth)
 % Y position is mod(second digit/gridwidth)
 start_position_personal(p(X,Y)):-
-	candidate_number(Z),
+	user:candidate_number(Z),
 	ailp_grid_size(N),
 	X is mod(Z,N) + 1,
 	number_codes(Z,[_A|[Y1|_B]]),
 	Y2 is Y1 - 48,
 	Y is mod(Y2,N) + 1.
-
-
 
 reset :-
 	ailp_grid_size(N),

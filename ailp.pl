@@ -1,3 +1,4 @@
+#!/usr/bin/env swipl -f -q
 /*
  *  ailp.pl
  *
@@ -23,49 +24,40 @@
         nl,
         write('Syntax:'),nl,
         nl,
-        write('  swipl -s ailp.pl <assignment_name>'),nl,
-        write('  e.g. swipl -s ailp.pl assignment1'),nl,
+        write('  ./ailp.pl <assignment_name>'),nl,
+        write('  e.g. ./ailp.pl assignment1'),nl,
         nl,
         halt(1)
     ),
-    assert(assignment(Assignment_name)),
-    atom_concat(Assignment_name, '_library', Assignment_library_name),
-    assert(assignment_library(Assignment_library_name)).
+    assert(assignment(Assignment_name)).
 
-
-:-  % define a module path ailp_root()
-    prolog_load_context(directory, Sys),
-    (\+ user:file_search_path(ailp_root, Sys)
-    ->  asserta(user:file_search_path(ailp_root, Sys))
-    ),
-    %
-    % define a our own library path ailp_library()
-    atom_concat(Sys, '/ailp', Lib),
-    (\+ user:file_search_path(ailp_library, Lib)
-    ->  asserta(user:file_search_path(ailp_library, Lib))
-    ),
-    % get assignment details
+:-  % get assignment details
     assignment(Assignment_name),
-    assignment_library(Assignment_library_name),
+    atom_concat(Assignment_name, '_library', Assignment_library_name),
     %
-    % define a module path for the specified assignment
-    atomic_list_concat([Lib, '/', Assignment_name], Ass),
-    (\+ user:file_search_path(ailp_assignment, Ass)
-    ->  asserta(user:file_search_path(ailp_assignment, Ass))
+    % define a module path assignment_root()
+    prolog_load_context(directory, Sys),
+    (\+ user:file_search_path(assignment_root, Sys)
+    ->  asserta(user:file_search_path(assignment_root, Sys))
     ),
     %
-    % define a module path for the specified assignment library
-    atom_concat(Ass, '/library', Asslib),
-    (\+ user:file_search_path(ailp_assignment_library, Asslib)
-    ->  asserta(user:file_search_path(ailp_assignment_library, Asslib))
+    % define our own ailp path assignment_ailp()
+    atom_concat(Sys, '/ailp', Ailp),
+    (\+ user:file_search_path(assignment_ailp, Ailp)
+    ->  asserta(user:file_search_path(assignment_ailp, Ailp))
     ),
     %
+    % define our own Library path assignment_library()
+    atom_concat(Ailp, '/library', Lib),
+    (\+ user:file_search_path(assignment_library, Lib)
+    ->  asserta(user:file_search_path(assignment_library, Lib))
+    ),
+    %
+    % load files
     load_files([
-        %ailp_library(command_channel),
-        %ailp_assignment(Assignment_name),
-        ailp_assignment_library(Assignment_library_name)
+        assignment_ailp(command_channel),
+        assignment_library(Assignment_library_name)
     ],
     [
         silent(true)
     ]).
-
