@@ -9,13 +9,15 @@
     ailp_show_complete/0,  %
     ailp_grid_size/1,      % -Size
     headless/1,            % enable/disable visualisations
-    complete/1,            % from assignment1.pl
-    new_pos/3,             % from assignment1.pl
-    m/1,                   % from assignment1.pl
-    next/1,                % from assignment1.pl
-    reset/0,               % re-exported from command_channel.pl
-    start/0,               % re-exported from command_channel.pl
-    stop/0                 % re-exported from command_channel.pl
+    %%% moved from assignment1.pl file %%%
+    complete/1,
+    new_pos/3,
+    m/1,
+    next/1,
+    %%% re-exported from command_channel.pl %%%
+    reset/0,
+    start/0,
+    stop/0
   ]
 ).
 
