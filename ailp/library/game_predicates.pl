@@ -23,7 +23,8 @@
 		]).
 
 :- dynamic
-	 ailp_internal/1.
+	 ailp_internal/1,
+	 dynamic_thread/1.
 
 
 %%% These parameters can be changed %%%
@@ -86,8 +87,13 @@ internal_start_game:-
 	; otherwise -> retract(ailp_internal(game_status(_)))
 		           ,assert(ailp_internal(game_status(running)))
 	),
-	dynamic_params(Th,Ch,Or,Period),
-	thread_create( dynamic_grid(Th,Ch,Or,Period), _MgId, []). % continuously move objects on the grid in a separate thread
+	( dynamic_thread(_) -> true
+	; otherwise -> % continuously move objects on the grid in a separate thread
+	               dynamic_params(Th,Ch,Or,Period), 
+	               thread_create( dynamic_grid(Th,Ch,Or,Period), ThreadID, []),
+	               assert(dynamic_thread(ThreadID))
+	). 
+
 
 random_free_pos(P):-
 	internal_grid_size(N),
