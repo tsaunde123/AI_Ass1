@@ -1,80 +1,93 @@
 /*
- *      assignment1_module.pl
- *
- *		assignment-specific program NOT to be edited by students.
+ *  assignment1_module.pl
+ *  assignment-specific program NOT to be edited by students.
  */
 
-:- module(assignment1_module,
-    [ ailp_show_move/2,      % +Old_pos, +New_pos
-      ailp_start_position/1, % binds with starting position p(X,Y)
-      ailp_show_complete/0,  %
-      ailp_grid_size/1,      % -Size
-      complete/1,            % from assignment1.pl
-      new_pos/3,             % from assignment1.pl
-      m/1,                   % from assignment1.pl
-      next/1,                % from assignment1.pl
-      reset/0,               % re-exported from command_channel.pl
-      start/0,               % re-exported from command_channel.pl
-      stop/0                 % re-exported from command_channel.pl
-    ]).
+:- module(assignment1,
+  [ ailp_show_move/2,      % +Old_pos, +New_pos
+    ailp_start_position/1, % binds with starting position p(X,Y)
+    ailp_show_complete/0,  %
+    ailp_grid_size/1,      % -Size
+    headless/1,            % enable/disable visualisations
+    complete/1,            % from assignment1.pl
+    new_pos/3,             % from assignment1.pl
+    m/1,                   % from assignment1.pl
+    next/1,                % from assignment1.pl
+    reset/0,               % re-exported from command_channel.pl
+    start/0,               % re-exported from command_channel.pl
+    stop/0                 % re-exported from command_channel.pl
+  ]
+).
 
 :- use_module('../command_channel').
-
 :- set_homepage('mower.html').
 
+% If headless(true) disable all do_command predicates
+:- dynamic headless/1.
+headless(false).
+
+:- dynamic ailp_grid_size/1.
+ailp_grid_size(4).
+
 % Commands:
-% 	[AgentId, say, Atom]
-% 	[AgentId, console, Atom]
-% 	[AgentId, go, Dir]
-% 	[AgentId, move, X,Y]
-% 	[AgentId, colour, X,Y,Colour]
-% 	[god, reset, Initial_state] // asserted by reset/0 to initialise game world
-%                               // in web page
+%  [AgentId, say, Atom]
+%  [AgentId, console, Atom]
+%  [AgentId, go, Dir]
+%  [AgentId, move, X,Y]
+%  [AgentId, colour, X,Y,Colour]
+%  [god, reset, Initial_state] // asserted by reset/0 to initialise game
+%                               // world in web page
 
 ailp_show_move(p(X0,Y0),p(X1,Y1)) :-
-	do_command([mower, colour, X0, Y0, lighter]),
-	do_command([mower, colour, X1, Y1, lighter]),
-	do_command([mower, move, X1, Y1], _Result).
-	%% term_to_atom(Result, A), do_command([mower, console, A]).
-	%	could succeed or fail here depending on legality of attempted move
-  %   (indciated by 'fail= @true' in R)
+  headless(H),
+  ( H -> true
+  ; (do_command([mower, colour, X0, Y0, lighter]),
+     do_command([mower, colour, X1, Y1, lighter]),
+     do_command([mower, move, X1, Y1], _Result)
+    )
+  ).
+  % term_to_atom(Result, A), do_command([mower, console, A]).
+  % could succeed or fail here depending on legality of attempted move
+  % (indciated by 'fail= @true' in R)
 
 ailp_show_complete :-
-	do_command([mower, say, 'Finished!'], _R).
+  headless(H),
+  ( H -> true
+  ; do_command([mower, say, 'Finished!'], _R)
+  ).
 
-ailp_grid_size(4).
-%ailp_start_position(1,1).
+% can change to use either start_position/1 or
+% start_position_personal/1
+ailp_start_position(P) :- start_position_personal(P).
 
-% can change to use either start_position/1 or start_position_personal/1
-ailp_start_position(P)  :- start_position_personal(P).
-
-%% ailp_start_position(p(N,N)) :-
-%% 	N = 1.
-start_position(p(1,1)).
+start_position(p(X,Y)) :- X = 1, Y = 1.
 
 % X position is mod(candidatenumber/gridwidth)
 % Y position is mod(second digit/gridwidth)
 start_position_personal(p(X,Y)):-
-	user:candidate_number(Z),
-	ailp_grid_size(N),
-	X is mod(Z,N) + 1,
-	number_codes(Z,[_A|[Y1|_B]]),
-	Y2 is Y1 - 48,
-	Y is mod(Y2,N) + 1.
+  user:candidate_number(Z),
+  ailp_grid_size(N),
+  X is mod(Z,N) + 1,
+  number_codes(Z,[_A|[Y1|_B]]),
+  Y2 is Y1 - 48,
+  Y is mod(Y2,N) + 1.
 
 reset :-
-	ailp_grid_size(N),
-	ailp_start_position(p(X,Y)),
-	reset([
-		grid_size=N,
-		cells=[
-			[forestgreen, 1,1, N,N]
-		],
-		agents=[
-			[mower, 6, royalblue, X,Y]
-		]
-	]),
-	do_command([mower, colour, X,Y, lighter]).
+  ailp_grid_size(N),
+  ailp_start_position(p(X,Y)),
+  reset([
+    grid_size=N,
+    cells=[
+      [forestgreen, 1,1, N,N]
+    ],
+    agents=[
+      [mower, 6, royalblue, X,Y]
+    ]
+  ]),
+  headless(H),
+  ( H -> true
+  ;      do_command([mower, colour, X,Y, lighter])
+  ).
 
 /*
  *  assignment1.pl
@@ -115,7 +128,10 @@ next(P,Ps,R) :-
   \+ memberchk(P1,Ps),
   ailp_show_move(P,P1),
   term_to_atom([P1|Ps],PsA),
-  do_command([mower,console,PsA],_R),
+  headless(H),
+  ( H -> true
+  ;      do_command([mower,console,PsA],_R)
+  ),
   next(P1,[P1|Ps],R).
 /*
  *      assignment1.pl

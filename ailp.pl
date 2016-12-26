@@ -55,7 +55,7 @@
     %
     % load files
     load_files([
-        assignment_ailp(command_channel),
+        %assignment_ailp(command_channel),
         assignment_library(Assignment_library_name)
     ],
     [
