@@ -18,16 +18,21 @@
 :-  % parse command line arguments
     current_prolog_flag(argv, Args),
     % take first argument to be the name of the assignment folder
-    (Args = [Assignment_name|_]
-     ->  true
-     ;  % missing argument, so display syntax and halt
-        nl,
-        write('Syntax:'),nl,
-        nl,
-        write('  ./ailp.pl <assignment_name>'),nl,
-        write('  e.g. ./ailp.pl assignment1'),nl,
-        nl,
-        halt(1)
+    ( Args=['assignment1'|[]] -> Assignment_name='assignment1'
+    ; Args=['assignment2','part1'|[]] -> Assignment_name='oscar'
+    ; Args=['assignment2','part2'|[]] -> Assignment_name='wp'
+    ; Args=['assignment2','part3'|[]] -> Assignment_name='assignment2'
+    ; Args=['assignment2','part4'|[]] -> Assignment_name='assignment2'
+    ; % missing argument, so display syntax and halt
+       nl,
+       write('Syntax:'),nl,
+       nl,
+       write('  ./ailp.pl <assignment_name> [part]'),nl,
+       write('e.g. ./ailp.pl assignment1'),nl,
+       write('or'),nl,
+       write('e.g. ./ailp.pl assignment2 part1'),nl,
+       nl,
+       halt(1)
     ),
     assert(assignment(Assignment_name)).
 
@@ -54,10 +59,15 @@
     ),
     %
     % load files
-    load_files([
-        %assignment_ailp(command_channel),
+    load_files(
+      [ %assignment_ailp(command_channel),
         assignment_library(Assignment_library_name)
-    ],
-    [
-        silent(true)
-    ]).
+      ],
+      [ silent(true)
+      ]
+    ),
+    %
+    % set up dependencies
+    ( Assignment_name='wp' -> (retract(part(1)), assertz(part(2)))
+    ; otherwise -> true
+    ).
