@@ -7,6 +7,22 @@
  *  assignmentN folder.
  */
 
+find_submission(Assignment, Submission) :-
+  directory_files('./', Files),
+  ( Assignment='assignment1' -> find_file('assignment1_', Files, Submission)
+  ; Assignment='oscar'       -> find_file('assignment2_', Files, Submission)
+  ; Assignment='wp'          -> find_file('assignment2_wp_', Files, Submission)
+  ).
+find_file(_, [], _) :- fail.
+find_file(Prefix, [F|Files], Submission) :-
+  ( check_file(Prefix, F) -> F=Submission
+  ; otherwise -> find_file(Prefix, Files, Submission)
+  ).
+check_file(Prefix, File) :-
+  atom_concat(Basename, '.pl', File),
+  atom_concat(Prefix, Candidate, Basename),
+  atom_number(Candidate, _).
+
 :- dynamic
      user:prolog_file_type/2,
      user:file_search_path/2.
@@ -58,10 +74,14 @@
     ->  asserta(user:file_search_path(assignment_library, Lib))
     ),
     %
+    % find candidate submission
+    find_submission(Assignment_name, Submission),
+    %
     % load files
     load_files(
       [ %assignment_ailp(command_channel),
-        assignment_library(Assignment_library_name)
+        assignment_library(Assignment_library_name),
+        assignment_root(Submission)
       ],
       [ silent(true)
       ]
