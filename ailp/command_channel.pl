@@ -13,10 +13,12 @@
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_parameters)).
 :- use_module(library(http/http_files)).
 :- use_module(library(http/http_client)).
 :- use_module(library(http/json)).
 :- use_module(library(www_browser)).
+:- use_module(library/game_predicates).
 
 :- dynamic
   command/1,
@@ -64,7 +66,7 @@ await_result(R) :-
   !,
   retractall(result(_)).
 await_result(R) :-
-  sleep(0.5),
+  sleep(0.2),
   await_result(R).
 
 do_command(Command) :-
@@ -72,6 +74,18 @@ do_command(Command) :-
 do_command(Command, Result) :-
   assert(command(Command)),
   await_result(Result).
+
+answer_query(Request):-
+  % get_data_from_request(Request, Data),
+  format('Content-type: text/plain~n~n', []),
+  http_parameters( Request,
+          [ pred(Pred, []),
+            args(Args, [])
+          ]),
+  term_to_atom(Terms,Args),
+  ( apply(Pred, Terms) -> term_to_atom(Terms,A), format(A)
+  ; otherwise -> format(fail)
+  ).
 
 % Requests for files in website's root or any of its subfolders
 % need to return static files from the web server's /web/ folder.
@@ -81,6 +95,8 @@ do_command(Command, Result) :-
 % The following handlers are exceptions to the above default:
 :- http_handler('/commands', api_method_commands, []).
 :- http_handler('/results', api_method_results, []).
+:- http_handler('/agent/queries', answer_query, [prefix]).
+%:- http_handler('/agent/commands', get_command, []).
 
 server_host('http://127.0.0.1').
 server_port(8000).
@@ -134,9 +150,9 @@ open_browser :-
 
 % start the web server
 start :-
-  start_server,
-  server_url(Url),
-  format('Started web server on ~w~n', [Url]),
+  start_server ->
+  (server_url(Url),
+  format('Started web server on ~w~n', [Url])),
   open_browser.
 
 % stop the web server

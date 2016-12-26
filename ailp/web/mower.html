@@ -12,7 +12,7 @@
 
     <!-- load AJAX interface to fetch commands from Prolog and return result of their execution back to Prolog -->
     <script type="text/javascript" src="/resources/js/CommandChannel.js"></script>
-	<title>AILP assignments</title>
+    <title>AILP assignments</title>
   </head>
   <body>
    
@@ -378,6 +378,8 @@
                       world.animate();
                   }, world.agentlayer);
                   world.anim.start();
+                  world.trace = ""; 
+                  $("#trace").html(world.trace);
                   return({});
               },
               go: function(args) {
