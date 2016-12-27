@@ -3,23 +3,24 @@
  *  Only use predicates exported in module heading in your code!
  */
 
-
 :- module(oscar_library,
   [ %%% Part 1 %%%
     %%% map predicates %%%
     map_adjacent/3,           % ?-map_adjacent(p(1,5),A,O).
     map_distance/3,           % ?-map_distance(p(1,5),p(2,3),D).
-    %%% agent predicates %%%  %
+    %%% agent predicates %%%
     agent_do_move/2,          % ?-agent_do_move(oscar,p(2,1)).      % must be adjacent
     agent_do_moves/2,         % ?-agent_do_moves(oscar,[p(2,1),p(3,1),p(4,1),p(4,2)]).
     agent_current_energy/2,   % ?-agent_current_energy(oscar,E).
     agent_current_position/2, % ?-agent_current_position(oscar,P).
     agent_topup_energy/2,     % ?-agent_topup_energy(oscar, c(1)).  % must be adjacent
     agent_ask_oracle/4,       % ?-agent_ask_oracle(oscar,o(1)).     % must be adjacent
-    %%% global predicates %%% %
+    %%% global predicates %%%
     ailp_reset/0,             % ?-ailp_reset.
     ailp_start_position/1,    % ?-ailp_start_position(Pos).
-    %%% assignment part %%% %
+    %%% Part 3 %%%
+    agent_check_oracle/2,     % ?-agent_check_oracle(oscar,o(1)).
+    %%% assignment part %%%
     part/1,
     %%% moved from oscar.pl file %%%
     shell/0,                   % interactive shell for the grid world
@@ -57,15 +58,11 @@ part(1).
 map_adjacent(Pos, AdjPos, OID) :-
   nonvar(Pos),
   internal_poss_step(Pos, _M, AdjPos, 1),
-  ( part(1) -> ( internal_off_board(AdjPos) -> fail
-               ; internal_object1(O,AdjPos,_) -> OID = O
-               ; otherwise -> OID = empty
-               )
-  ; part(3) -> ( internal_off_board(AdjPos) -> fail
-               ; internal_object1(O,AdjPos,_) -> OID = O
-               ; otherwise -> OID = empty
-               )
-  ; part(4) -> query_world( check_pos, [AdjPos, OID])
+  ( part(4)   -> query_world( check_pos, [AdjPos, OID])
+  ; otherwise -> ( internal_off_board(AdjPos) -> fail
+                 ; internal_object1(O,AdjPos,_) -> OID = O
+                 ; otherwise -> OID = empty
+                 )
   ).
 
 % map_distance(+Pos1, +Pos2, ?Distance)
@@ -92,7 +89,7 @@ agent_do_move(Agent,To) :-
   do_command([Agent, move, X, Y], _R),
   do_command([Agent, colour, X, Y, yellow]),
   %% move was successful so decrease agent energy
-  internal_use_energy(Agent),
+  internal_use_energy(Agent, 1),
   retract(ailp_internal(agent_position(Agent, Pos))),
   assert(ailp_internal(agent_position(Agent, To))).
 
@@ -106,7 +103,11 @@ agent_do_moves(Agent, [H|T]) :-
 agent_current_energy(Agent, Energy) :-
   nonvar(Agent),
   var(Energy),
-  ailp_internal(agent_energy(Agent,Energy)).
+  ailp_internal(agent_energy(Agent,Energy)),
+  ( part(3)   -> atomic_list_concat(['Current energy:',Energy],' ',A),
+                 do_command([Agent,console,A])
+  ; otherwise -> true
+  ).
 
 % agent_current_position(+Agent, -Pos)
 agent_current_position(Agent, Pos) :-
@@ -128,19 +129,39 @@ agent_topup_energy(Agent, OID) :-
 
 % agent_ask_oracle(+Agent, +OID, +Question, -Answer)
 % Agent's position needs to be map_adjacent to oracle identified by OID
+% Part3: fails if oracle already visited by Agent
 agent_ask_oracle(Agent, OID, Question, Answer) :-
   nonvar(Agent),
   nonvar(OID),
+  ( part(3)   -> \+ ailp_internal(agent_visited_oracle(oscar, OID))
+  ; otherwise -> true
+  ),
   nonvar(Question),
   var(Answer),
-  ( part(1) -> (agent_current_position(Agent,Pos), map_adjacent(Pos, AdjPos, OID))
-  ; part(2) -> true  % ignore agent position for testing
-  ; otherwise -> (write('Unknown part: *'), part(P), write(P), write(*), nl)
-  ),
-  OID = o(_),
-  internal_object(OID, AdjPos, Options),
-  member(question(Q)/answer(A),Options),
-  ( Question=Q -> Answer=A ; Answer='I do not know' ).
+  ( part(3)   -> internal_topup(Emax),
+                 Cost is ceiling(Emax/10),
+                 ailp_internal(agent_energy(Agent,Energy)),
+                 ( Energy>Cost -> agent_current_position(Agent,Pos),
+                                  map_adjacent(Pos, AdjPos, OID),
+                                  OID = o(_),
+                                  internal_object(OID, AdjPos, Options),
+                                  member(question(Q)/answer(A),Options),
+                                  ( Question=Q -> Answer=A ; Answer='I do not know' ),
+                                  atomic_list_concat([Question,Answer],': ',AA),
+                                  internal_use_energy(Agent,Cost),
+                                  assert(ailp_internal(agent_visited_oracle(oscar, OID)))
+                 ; otherwise -> Answer='Sorry, not enough energy',AA=Answer
+                 ),
+                 do_command([Agent,console,AA])
+  ; otherwise -> ( part(1) -> (agent_current_position(Agent,Pos), map_adjacent(Pos, AdjPos, OID))
+                 ; part(2) -> true  % ignore agent position for testing
+                 ; otherwise -> (write('Unknown part: *'), part(P), write(P), write('*'), nl)
+                 ),
+                 OID = o(_),
+                 internal_object(OID, AdjPos, Options),
+                 member(question(Q)/answer(A),Options),
+                 ( Question=Q -> Answer=A ; Answer='I do not know' )
+  ).
 
 %%%%%%%%%% global predicates %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ailp_start_position(p(1,1)).
@@ -153,7 +174,12 @@ ailp_reset :-
   assert(ailp_internal(agent_position(oscar, p(X0,Y0)))),
   internal_topup(Emax),
   assert(ailp_internal(agent_energy(oscar, Emax))),
-  init_things,
+  ( part(3)   -> init_things(oracle,N/2),
+                 init_things(charging_station,N/10),
+                 init_things(thing,N*N/4),
+                 wp:init_identity  % defined in wp.pl
+  ; otherwise -> init_things
+  ),
   reset([
     grid_size=N,
     cells=[
@@ -161,6 +187,9 @@ ailp_reset :-
     ],
     agents=[[oscar, 6, blue, X0,Y0]]
   ]),
+  ( part(3)   -> internal_colour_map  % make objects visible at the start
+  ; otherwise -> true
+  ),
   do_command([oscar, colour, X0, Y0, yellow]).
 
 %%%%%%%%%% Do not query any of the predicates below! %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -168,7 +197,9 @@ internal_grid_size(20).  % may be changed in testing
 
 internal_topup(Emax):-
   internal_grid_size(N),
-  Emax is N*N/5.
+  ( part(3)   -> Emax is ceiling(N*N/4)
+  ; otherwise -> Emax is N*N/5
+  ).
 
 internal_poss_step(p(X,Y), M, p(X1,Y1), I) :-
   member(M, [s,e,n,w]), % try moves in this order
@@ -186,24 +217,24 @@ internal_off_board(p(X,Y)) :-
   ; Y > N
   ).
 
-internal_use_energy(Agent) :-
+internal_use_energy(Agent, Cost) :-
   nonvar(Agent),
   retract(ailp_internal(agent_energy(Agent, E))),
-  E>0, E1 is E - 1,
+  E>0, E1 is E - Cost,
   assert(ailp_internal(agent_energy(Agent,E1))),
-  ( E1 < 20 -> atomic_list_concat(['Low energy:',E1],' ',A),
+  ( E1 < 20 -> atomic_list_concat(['WARNING -- Low energy:',E1],' ',A),
          do_command([Agent,console,A])
   ; true
   ).
 
-%%%%%%%%%% The position and number of these objects may change when testing %%%%
-%%%%%%%%%% your code %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% WP version -- used only for Part 2 of the assignment
+%%%%%%%%%% Objects on the map %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% WP version -- used only for Part 2 of the assignment
 internal_object(o(1), p(5,3), [question(link)/answer(Link)]) :-
   part(2),
   wp:ailp_identity(A),
   wp:random_link(A,Link).
-% Local version
+%%% Part 1 version
+%%% The position and number of these objects may change when testing
 % Charging stations
 internal_object(c(1), p(1,10), []) :- part(1).
 internal_object(c(2), p(10,20), []) :- part(1).
@@ -215,36 +246,35 @@ internal_object(o(1), p(5,3), [question(_)/answer(42)]) :- part(1).
 internal_object(t(I), Pos, []) :-
   part(1),
   ailp_internal_thing(I,Pos).
-%internal_object(O, P, D) :-
-%  part(1),
-%  %% Charging stations
-%  ( (O=c(1), P=p(1,10), D=[])
-%  ; (O=c(2), P=p(10,20), D=[])
-%  ; (O=c(3), P=p(20,9), D=[])
-%  ; (O=c(4), P=p(9,1), D=[])
-%  %% Oracles that have information
-%  ; (O=o(1), P=p(5,3), D=[question(_)/answer(42)])
-%  %% Obstacles (things)
-%  ; (O=t(I), P=Pos, D=[], ailp_internal_thing(I,Pos))
-%  ).
-%% WP version -- used only for Part 2 of the assignment
-%internal_object(O, P, D) :-
-%  part(2),
-%  O=o(1),
-%  P=p(5,3),
-%  D=[question(link)/answer(Link)],
-%  wp:ailp_identity(A),
-%  wp:random_link(A,Link).
+%%% Part 3 version
+%%% The position and number of these objects changes every time ailp_reset/0 is called
+internal_object(c(I),Pos,[]) :-
+  part(3),
+  ailp_internal(charging_station(I,Pos)).
+%% Oracles that have information
+internal_object(o(I),Pos,[question(link)/answer(Link)]):-
+  part(3),
+  ailp_internal(oracle(I,Pos)),
+  wp:ailp_identity(A),
+  wp:random_link(A,Link).
+%% Obstacles (things)
+internal_object(t(I),Pos,[]):-
+  part(3),
+  ailp_internal(thing(I,Pos)).
+%%% Multi version end
 
 % version that makes the object visible on the map
 internal_object1(O,Loc,L):-
   internal_object(O,Loc,L),
-  Loc=p(X,Y),
-  ( O=t(_) -> Colour=black   % obstacle
-  ; O=c(_) -> Colour=orange  % charging station
-  ; O=o(_) -> Colour=red     % oracle
-  ),
-  do_command([oscar,colour,X,Y,Colour]).
+  ( part(3)   -> true
+                 %internal_colour_loc(O,Loc)  % disabled as may cause web client overload
+  ; otherwise -> Loc=p(X,Y),
+                 ( O=t(_) -> Colour=black   % obstacle
+                 ; O=c(_) -> Colour=orange  % charging station
+                 ; O=o(_) -> Colour=red     % oracle
+                 ),
+                 do_command([oscar,colour,X,Y,Colour])
+  ).
 
 init_things :-
   retractall(ailp_internal_thing(_,_)),
@@ -364,6 +394,50 @@ assert_internal_things:-
   assert(ailp_internal_thing(99,p(3,5))).
 
 /*
+ *  Part 3
+ */
+% agent_check_oracle(+Agent, +OID)
+% checks whether oracle already visited by Agent
+agent_check_oracle(Agent, OID) :-
+  nonvar(Agent),
+  nonvar(OID),
+  ailp_internal(agent_visited_oracle(oscar, OID)).
+
+init_things(Label,Exp) :-
+  K is ceiling(Exp),  % round up if Exp evaluates to a fraction
+  KK = 99999,
+  randset(K,KK,S),
+  internal_grid_size(N),
+  internal_things(S,N,Label,1).
+
+internal_things([],_N,_L,_M).
+internal_things([Z|Zs],N,Label,M):-
+  internal_number2pos(Z,N,Pos),
+  Fact =.. [Label,M,Pos],
+  ( internal_object(_O,Pos,_L) -> true
+  ; ailp_start_position(Pos) -> true
+  ; otherwise -> assert(ailp_internal(Fact))
+  ),
+  M1 is M+1,
+  internal_things(Zs,N,Label,M1).
+
+internal_colour_map:-
+  internal_object(O,Loc,_),
+  internal_colour_loc(O,Loc),
+  fail.
+internal_colour_map.
+
+internal_colour_loc(O,p(X,Y)):-
+  ( O=t(_) -> Colour=black  % obstacle
+  ; O=c(_) -> Colour=orange % charging station
+  ; O=o(_) -> Colour=red    % oracle
+  ),
+  do_command([oscar,colour,X,Y,Colour]).
+/*
+ *  Part 3
+ */
+
+/*
  *  Part 4
  * Contains predicates which allow the communication between the agent/client and the server through http post requests.
  * All predicates allowed to be sent to the server are indicated by possible_query/2.
@@ -403,10 +477,10 @@ possible_query(ailp_reset, []).
 join_game(Agent):-
   ( \+query_world(game_status,[running]) ->
     ( my_agent(Agent) -> format('Your agent has already joined the game')
-    ; otherwise -> query_world(internal_join_game, [Agent]),
-                 assert(ailp_internal(agent(Agent)))
+    ; otherwise       -> query_world(internal_join_game, [Agent]),
+                         assert(ailp_internal(agent(Agent)))
     )
-  ; otherwise -> format('Cannot join! Game has already started')
+  ; otherwise                            -> format('Cannot join! Game has already started')
   ).
 
 leave_game:-
@@ -448,8 +522,7 @@ handle_input(Input) :-
                            )
 
   ; Input = reset       -> ( part(4)   -> reset_game,start_game,shell
-                           ; part(3)   -> ailp_reset,shell
-                           ; part(1)   -> ailp_reset,shell
+                           ; otherwise -> ailp_reset,shell
                            )
   ; Input = stop        -> true
   ; Input = [H|T]       -> handle_input(H),handle_input(T),shell
@@ -465,9 +538,8 @@ get_input(Input) :-
 % show answer to user
 %%% Part 1 & 3 + Part 4
 show_response(R) :-
-  ( part(1) -> Agent = oscar
-  ; part(3) -> Agent = oscar
-  ; part(4) -> my_agent(Agent)
+  ( part(4)   -> my_agent(Agent)
+  ; otherwise -> Agent = oscar
   ),
   ( R=shell(Response)   -> writes('! '),writes(Response),writes(nl)
   ; R=console(Response) -> term_to_atom(Response,A),do_command([Agent,console,A])

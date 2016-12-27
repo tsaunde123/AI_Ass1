@@ -95,6 +95,16 @@ Your mission, should you choose to accept it, involves the implementation of a p
 
 **Hint:** with the given code to query Wikipedia this is easier than it may sound: my solution has less than 20 lines of Prolog code.
 
+## Part 3: Identity crisis, continued ##
+Now you need to adapt `find_identity/1` to work in the grid world. Running the assignment with `./ailp.pl assignment2 part3` will create random 20 by 20 grid worlds with 10 oracles, 2 charging stations and up to 100 obstacles. You can get a random link from each oracle that will help you to deduce the secret identity as before. The catch is that each oracle can be queried only once. Furthermore, querying the oracle costs 10 units of energy, so you need to keep your energy levels topped up (at the start and after each top-up your energy level is 100). Here is a QuickTime video to demonstrate the main idea: [`oscar480.mov`](https://www.cs.bris.ac.uk/Teaching/Resources/COMS30106/labs/assignment2/oscar480.mov).
+
+**Hints:**
+1. Run the assignment with `./ailp.pl assignment2 part3`.
+2. Modify `find_identity/1` to navigate around the grid world, find oracles and ask for random links.
+3. It is a good idea for your agent to maintain an internal memory of where it has seen oracles and charging stations, so that it can easily navigate to the nearest charging station and (unvisited) oracles. In my example this internal memory is reset using `init_oscar_memory/0`.
+4. The only change to the `oscar_library.pl` API is an added predicate `agent_check_oracle/2` which succeeds if your agent (`oscar`) has already queried this oracle.
+5. The worlds are entirely randomly generated, which means that some worlds are unsolvable (e.g., you may not be able to leave the starting position). Also, the oracles are independent and are likely to give you a link you already knew, so sometimes you don't know your identity even after visiting all oracles.
+
 ## Part 4: Optional ##
 You will need to navigate a dynamic world, as some of the obstacles, oracles and charging stations may be moving around, and the world may contain additional agents. It is likely that your previous A\* search will fail whenever the agent finds its planned path blocked by a moved object or another agent. So the minimum I'm looking for here is robustness in your search and the ability to re-plan when necessary. Being able to work with multiple agents is a bonus.
 
