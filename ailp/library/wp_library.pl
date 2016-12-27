@@ -8,6 +8,7 @@
     part/1,              % Re-exported form oscar_library.pl
     wp/1,
     wp/2,
+    wt_link/2,
     actor/1,
     link/1,
     init_identity/0,
@@ -15,8 +16,7 @@
   ]
 ).
 
-% We need oscar_library.pl for agent_ask_oracle/4
-:- use_module(oscar_library).
+:- use_module(oscar_library, [agent_ask_oracle/4, part/1]).
 :- use_module(library(http/http_open)).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).

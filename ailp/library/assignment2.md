@@ -94,3 +94,13 @@ To run this assignment execute: `./ailp.pl assignment2 part2`. Every time `wp_li
 Your mission, should you choose to accept it, involves the implementation of a predicate `find_identity/1` (located in `assignment2_wp_12345.pl` file) which repeatedly calls `agent_ask_oracle(oscar,o(1),link,L)` and deduces the secret identity by a process of elimination. You can test your code by means of the query `?-test`, which iterates through all possible secret identities.
 
 **Hint:** with the given code to query Wikipedia this is easier than it may sound: my solution has less than 20 lines of Prolog code.
+
+## Part 4: Optional ##
+You will need to navigate a dynamic world, as some of the obstacles, oracles and charging stations may be moving around, and the world may contain additional agents. It is likely that your previous A\* search will fail whenever the agent finds its planned path blocked by a moved object or another agent. So the minimum I'm looking for here is robustness in your search and the ability to re-plan when necessary. Being able to work with multiple agents is a bonus.
+
+Brief instructions:
+1. To run the assignment execute: `./ailp.pl assignment2 part4`.
+2. One change is that the code can accommodate multiple agents. Communication with the world model is therefore now via HTTP. See *part 4* section of the `ailp/library/oscar_library.pl` file, which explains the API and contains *shell* with some added commands.
+3. Another change is that the objects in the world can move around in a random fashion. The parameters controlling this can be changed in the file `ailp/library/game_predicates.pl`.
+4. `assignment2_12345.pl` contains the same simple backtracking search algorithm given before.
+5. The main steps to get your own code working with this involve changing calls like `agent_current_position(Agent,Pos)` to `query_world(agent_current_position,[Agent,Pos])`.

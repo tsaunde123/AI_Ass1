@@ -5,7 +5,8 @@
 
 
 :- module(oscar_library,
-  [ %%% map predicates %%%
+  [ %%% Part 1 %%%
+    %%% map predicates %%%
     map_adjacent/3,           % ?-map_adjacent(p(1,5),A,O).
     map_distance/3,           % ?-map_distance(p(1,5),p(2,3),D).
     %%% agent predicates %%%  %
@@ -18,13 +19,23 @@
     %%% global predicates %%% %
     ailp_reset/0,             % ?-ailp_reset.
     ailp_start_position/1,    % ?-ailp_start_position(Pos).
+    %%% assignment part %%% %
     part/1,
     %%% moved from oscar.pl file %%%
     shell/0,                   % interactive shell for the grid world
     %%% re-exported from command_channel.pl %%%
-    ailp_reset/0,
     start/0,
-    stop/0
+    stop/0,
+    %%% Part 4 %%%
+    query_world/2,
+    possible_query/2,
+    my_agent/1,
+    leave_game/0,
+    join_game/1,
+    start_game/0,
+    reset_game/0
+    % map_adjacent/3,
+    % map_distance/3
   ]
 ).
 
@@ -40,20 +51,28 @@
 part(1).
 
 %%%%%%%%%% map predicates %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Part 1 & 3 + 4
 % map_adjacent(+Pos, ?AdjPos, ?Occ)
 % Occ = empty / c(42) / o(37) - charging station / oracle and ids
 map_adjacent(Pos, AdjPos, OID) :-
   nonvar(Pos),
   internal_poss_step(Pos, _M, AdjPos, 1),
-  ( internal_off_board(AdjPos) -> fail
-  ; internal_object1(O,AdjPos,_) -> OID = O
-  ; otherwise -> OID = empty
+  ( part(1) -> ( internal_off_board(AdjPos) -> fail
+               ; internal_object1(O,AdjPos,_) -> OID = O
+               ; otherwise -> OID = empty
+               )
+  ; part(3) -> ( internal_off_board(AdjPos) -> fail
+               ; internal_object1(O,AdjPos,_) -> OID = O
+               ; otherwise -> OID = empty
+               )
+  ; part(4) -> query_world( check_pos, [AdjPos, OID])
   ).
 
 % map_distance(+Pos1, +Pos2, ?Distance)
 % Manhattan distance between two grid squares
 map_distance(p(X,Y),p(X1,Y1), D) :-
   D is abs(X - X1) + abs(Y - Y1).
+% Part 1 & 3 + 4 (End)
 
 %%%%%%%%%% agent predicates %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % agent_do_move(+Agent, +To)
@@ -200,13 +219,13 @@ internal_object(t(I), Pos, []) :-
 %  part(1),
 %  %% Charging stations
 %  ( (O=c(1), P=p(1,10), D=[])
-%  ; (O=c(2), P=p(10,20), D=[]) 
-%  ; (O=c(3), P=p(20,9), D=[]) 
-%  ; (O=c(4), P=p(9,1), D=[]) 
+%  ; (O=c(2), P=p(10,20), D=[])
+%  ; (O=c(3), P=p(20,9), D=[])
+%  ; (O=c(4), P=p(9,1), D=[])
 %  %% Oracles that have information
-%  ; (O=o(1), P=p(5,3), D=[question(_)/answer(42)]) 
+%  ; (O=o(1), P=p(5,3), D=[question(_)/answer(42)])
 %  %% Obstacles (things)
-%  ; (O=t(I), P=Pos, D=[], ailp_internal_thing(I,Pos)) 
+%  ; (O=t(I), P=Pos, D=[], ailp_internal_thing(I,Pos))
 %  ).
 %% WP version -- used only for Part 2 of the assignment
 %internal_object(O, P, D) :-
@@ -224,10 +243,10 @@ internal_object1(O,Loc,L):-
   ( O=t(_) -> Colour=black   % obstacle
   ; O=c(_) -> Colour=orange  % charging station
   ; O=o(_) -> Colour=red     % oracle
-  ),  
+  ),
   do_command([oscar,colour,X,Y,Colour]).
 
-init_things :-   
+init_things :-
   retractall(ailp_internal_thing(_,_)),
   assert_internal_things.
   % the following code generates a random set of internal things instead
@@ -345,6 +364,69 @@ assert_internal_things:-
   assert(ailp_internal_thing(99,p(3,5))).
 
 /*
+ *  Part 4
+ * Contains predicates which allow the communication between the agent/client and the server through http post requests.
+ * All predicates allowed to be sent to the server are indicated by possible_query/2.
+ *
+ * Only use predicates exported in module heading in your code!
+ */
+referee_queries_path('http://127.0.0.1:8000/agent/queries').
+%referee_queries_path('http://137.222.102.101:8000/agent/queries').
+
+query_world(Pred, Args):-
+  possible_query(Pred,Args),
+  referee_queries_path(Path),
+  term_to_atom(Args, NewArgs),
+  http_post(Path,
+    form_data([ pred = Pred,
+          args = NewArgs
+          ]),
+    Reply, []),
+  term_to_atom(TermReply,Reply),
+  ( TermReply = fail -> fail
+  ; otherwise-> Args = TermReply
+  ).
+
+possible_query(check_pos, [_Pos, _OID]).                     % ?-query_world( check_pos, [p(1,2), empty])
+possible_query(agent_ask_oracle, [_Agent,_OID,_Q,_L]).       % ( agent_ask_oracle, [4, o(3), link, L)
+possible_query(agent_current_energy, [_Agent,_E]).           % ( agent_current_energy, [6,E]).
+possible_query(agent_current_position, [_Agent,_P]).         % ( agent_current_position, [oscar,P]).
+possible_query(agent_topup_energy, [_Agent,_ChargStation]).  % ( agent_topup_energy, [2, c(1)]).
+possible_query(agent_check_oracle, [_Agent, _Oracle]).       % ( agent_check_oracle, [9, o(1)]).
+possible_query(agent_do_moves, [_Agent, _Path]).             % ( agent_do_moves, [ 1, Path]).
+possible_query(internal_leave_game, [_Agent]).               % ( internal_leave_game, [ 2]).
+possible_query(internal_join_game, [_Agent]).                % ( agent_join_game, [Agent]).
+possible_query(game_status, [_Status]).                      % ( game_status, [stopped]).
+possible_query(internal_start_game, []).
+possible_query(ailp_reset, []).
+
+join_game(Agent):-
+  ( \+query_world(game_status,[running]) ->
+    ( my_agent(Agent) -> format('Your agent has already joined the game')
+    ; otherwise -> query_world(internal_join_game, [Agent]),
+                 assert(ailp_internal(agent(Agent)))
+    )
+  ; otherwise -> format('Cannot join! Game has already started')
+  ).
+
+leave_game:-
+  my_agent(Agent),
+  retract(ailp_internal(agent(Agent))),
+  query_world(internal_leave_game, [Agent]).
+
+start_game:-
+  query_world(internal_start_game, []).
+
+my_agent(Agent):-
+  ailp_internal(agent(Agent)).
+
+reset_game:-
+  query_world(ailp_reset, []).
+/*
+ *  Part 4
+ */
+
+/*
  *  Moved from oscar.pl
  */
 %%%%%%%%%% command shell %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -352,28 +434,50 @@ shell :-
   get_input(Input),
   handle_input(Input).
 
+%%% Part 1 & 3 + Part 4
 handle_input(Input) :-
-  ( Input = stop -> true
-  ; Input = reset -> ailp_reset,shell
-  ; Input = [H|T] -> handle_input(H),handle_input(T),shell
+  ( Input = setup       -> ( part(4)   -> join_game(_A),handle_input(reset)
+                           ; otherwise -> show_response('This command works only with Part 4.'),shell
+                           )
+  ; Input = status      -> ( part(4)   -> query_world(game_status,[S]),show_response(S),shell
+                           ; otherwise -> show_response('This command works only with Part 4.'),shell
+                           )
+
+  ; Input = whoami      -> ( part(4)   -> my_agent(A),show_response(A),shell
+                           ; otherwise -> show_response('This command works only with Part 4.'),shell
+                           )
+
+  ; Input = reset       -> ( part(4)   -> reset_game,start_game,shell
+                           ; part(3)   -> ailp_reset,shell
+                           ; part(1)   -> ailp_reset,shell
+                           )
+  ; Input = stop        -> true
+  ; Input = [H|T]       -> handle_input(H),handle_input(T),shell
   ; callable(Input,G,R) -> ( call(G) -> show_response(R) ; show_response('This failed.') ),shell
-  ; otherwise -> show_response('Unknown command, please try again.'),shell
+  ; otherwise           -> show_response('Unknown command, please try again.'),shell
   ).
+%%% Part 1 & 3 + Part 4 (End)
 
 % get input from user
 get_input(Input) :-
   write('? '),read(Input).
 
 % show answer to user
+%%% Part 1 & 3 + Part 4
 show_response(R) :-
+  ( part(1) -> Agent = oscar
+  ; part(3) -> Agent = oscar
+  ; part(4) -> my_agent(Agent)
+  ),
   ( R=shell(Response)   -> writes('! '),writes(Response),writes(nl)
-  ; R=console(Response) -> term_to_atom(Response,A),do_command([oscar,console,A])
+  ; R=console(Response) -> term_to_atom(Response,A),do_command([Agent,console,A])
   ; R=both(Response)    -> show_response(shell(Response)),show_response(console(Response))
-  ; R=agent(Response)   -> term_to_atom(Response,A),do_command([oscar,say,A])
+  ; R=agent(Response)   -> term_to_atom(Response,A),do_command([Agent,say,A])
   ; R=[H|T]             -> show_response(H),show_response(T)
   ; R=[]                -> true
   ; otherwise           -> writes(['! ',R])
   ).
+%%% Part 1 & 3 + Part 4 (End)
 
 writes(A) :-
   ( A=[]      -> nl
@@ -384,13 +488,25 @@ writes(A) :-
   ).
 
 % callable(+Command, +Goal, ?Response)
-callable(call(G),call(G),G).
-callable(topup(S),agent_topup_energy(oscar,S),agent(topup)).
-callable(energy,agent_current_energy(oscar,E),both(current_energy(E))).
-callable(position,agent_current_position(oscar,P),both(current_position(P))).
-callable(ask(S,Q),agent_ask_oracle(oscar,S,Q,A),A).
+%%% Part 1 & 3
+callable(call(G),call(G),G) :- (part(1); part(3)), !.
+callable(topup(S),agent_topup_energy(oscar,S),agent(topup)) :- (part(1); part(3)), !.
+callable(energy,agent_current_energy(oscar,E),both(current_energy(E))) :- (part(1); part(3)), !.
+callable(position,agent_current_position(oscar,P),both(current_position(P))) :- (part(1); part(3)), !.
+callable(ask(S,Q),agent_ask_oracle(oscar,S,Q,A),A) :- (part(1); part(3)), !.
 callable(Task,user:solve_task(Task,Cost),[console(Task),shell(term(Cost))]) :-
+  (part(1); part(3)), !,
   task(Task).
+%%% Part 1 & 3 (End)
+%%% Part 4
+callable(topup(S),(my_agent(Agent),query_world( agent_topup_energy, [Agent,S] )),agent(topup)) :- part(4), !.
+callable(energy,(my_agent(Agent),query_world( agent_current_energy, [Agent,E] )),both(current_energy(E))) :- part(4), !.
+callable(position,(my_agent(Agent),query_world( agent_current_position, [Agent,P] )),both(current_position(P))) :- part(4), !.
+callable(ask(S,Q),(my_agent(Agent),query_world( agent_ask_oracle, [Agent,S,Q,A] )),A) :- part(4), !.
+callable(Task,user:solve_task(Task,Cost),[console(Task),shell(term(Cost))]):-
+  part(4), !,
+  task(Task).
+%%% Part 4 (End)
 
 task(go(_Pos)).
 task(find(_O)).  % oracle o(N) or charging station c(N)
