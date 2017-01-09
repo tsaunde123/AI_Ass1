@@ -91,11 +91,11 @@ check_file(Prefix, File) :-
     %
     % load files and set up dependencies
     ( Assignment_part=0  -> use_module(assignment_library(Assignment_library_name))
-    ; Assignment_part=1  -> use_module(assignment_library(Assignment_library_name), [map_adjacent/3,map_distance/3,agent_do_move/2,agent_do_moves/2,agent_current_energy/2,agent_current_position/2,agent_topup_energy/2,agent_ask_oracle/4,ailp_reset/0,ailp_start_position/1,part/1,shell/0,start/0,stop/0])
+    ; Assignment_part=1  -> use_module(assignment_library(Assignment_library_name), [map_adjacent/3,map_distance/3,agent_do_move/2,agent_do_moves/2,agent_current_energy/2,agent_current_position/2,agent_topup_energy/2,agent_ask_oracle/4,ailp_reset/0,ailp_start_position/1,part/1,shell/0,start/0,stop/0,say/1])
     ; Assignment_part=2 -> use_module(assignment_library(Assignment_library_name), [agent_ask_oracle/4,part/1,wp/1,wp/2,wt_link/2,actor/1,link/1,init_identity/0,test/0]),
                            retract(part(1)), assertz(part(2))
     ; Assignment_part=3 -> use_module(assignment_library('wp_library'), except([part/1,agent_ask_oracle/4])),
-                           use_module(assignment_library(Assignment_library_name), [map_adjacent/3,map_distance/3,agent_do_move/2,agent_do_moves/2,agent_current_energy/2,agent_current_position/2,agent_topup_energy/2,agent_ask_oracle/4,ailp_reset/0,ailp_start_position/1,agent_check_oracle/2,part/1,shell/0,start/0,stop/0]),
+                           use_module(assignment_library(Assignment_library_name), [map_adjacent/3,map_distance/3,agent_do_move/2,agent_do_moves/2,agent_current_energy/2,agent_current_position/2,agent_topup_energy/2,agent_ask_oracle/4,ailp_reset/0,ailp_start_position/1,agent_check_oracle/2,part/1,shell/0,start/0,stop/0,say/1]),
                            find_submission('wp', WpSubmission),
                            load_files([assignment_root(WpSubmission)], [silent(true)]),
                            retract(part(1)), assertz(part(3))

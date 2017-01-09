@@ -20,6 +20,8 @@
     ailp_start_position/1,    % ?-ailp_start_position(Pos).
     %%% Part 3 %%%
     agent_check_oracle/2,     % ?-agent_check_oracle(oscar,o(1)).
+    %%% oscar_message %%%
+    say/1,
     %%% assignment part %%%
     part/1,
     %%% moved from oscar.pl file %%%
@@ -585,3 +587,9 @@ task(find(_O)).  % oracle o(N) or charging station c(N)
 /*
  *  oscar.pl
  */
+
+ %% Extra predicates
+say(Message) :-
+  do_command([oscar, say, Message]).
+say(Message, Agent) :-
+  do_command([Agent, say, Message]).
