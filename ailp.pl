@@ -101,6 +101,8 @@ check_file(Prefix, File) :-
                            retract(part(1)), assertz(part(3))
     ; Assignment_part=4 -> use_module(assignment_library('wp_library'), except([part/1,agent_ask_oracle/4])),
                            use_module(assignment_library(Assignment_library_name), [part/1,shell/0,start/0,stop/0,query_world/2,possible_query/2,my_agent/1,leave_game/0,join_game/1,start_game/0,reset_game/0,map_adjacent/3,map_distance/3]),
+                           find_submission('wp', WpSubmission),
+                           load_files([assignment_root(WpSubmission)], [silent(true)]),
                            retract(part(1)), assertz(part(4))
     ; otherwise         -> true
     ).

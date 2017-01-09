@@ -23,6 +23,8 @@
   ]
 ).
 
+:- use_module('../command_channel.pl').
+
 :- dynamic
   ailp_internal/1,
   dynamic_thread/1.
@@ -215,7 +217,7 @@ ailp_reset :-
   init_things(oracle,N/2),
   init_things(charging_station,N/10),
   init_things(thing,N*N/4),
-  init_identity,  % defined in wp.pl
+  wp:init_identity,  % defined in wp.pl
   maplist( drawable_agent, Agents, DrawableAgents),
   append( DrawableAgents, [[dyna, 0,red, 1,1]], AllAgents), % adds a dummy agent to use in do_command predicate
   reset([
@@ -291,8 +293,8 @@ internal_object(c(I),Pos,[]) :-
 %% Oracles that have information
 internal_object(o(I),Pos,[question(link)/answer(Link)]):-
   ailp_internal(oracle(I,Pos)),
-  ailp_identity(A),
-  random_link(A,Link).
+  wp:ailp_identity(A),
+  wp:random_link(A,Link).
 %% Obstacles (things)
 internal_object(t(I),Pos,[]) :-
   ailp_internal(thing(I,Pos)).

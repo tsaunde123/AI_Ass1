@@ -42,6 +42,10 @@
   ]
 ).
 
+% Part 4 %
+:- use_module(library(http/http_client), [http_post/4]).
+% Part 4 %
+
 :- use_module('../command_channel.pl').
 :- set_homepage('oscar.html').
 
