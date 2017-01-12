@@ -23,6 +23,25 @@ check_file(Prefix, File) :-
   atom_concat(Prefix, Candidate, Basename),
   atom_number(Candidate, _).
 
+translate_input_options(Args, Assignment_name, Part) :-
+  ( Args=['assignment1'|[]]         -> Assignment_name='assignment1',Part=0
+  ; Args=['assignment2','part1'|[]] -> Assignment_name='oscar',Part=1
+  ; Args=['assignment2','part2'|[]] -> Assignment_name='wp',Part=2
+  ; Args=['assignment2','part3'|[]] -> Assignment_name='oscar',Part=3
+  ; Args=['assignment2','part4'|[]] -> Assignment_name='oscar',Part=4
+  ; otherwise                       -> fail
+  ).
+
+read_in_choice(Assignment_name, Part) :-
+  nl, write('Please input `> assignment_name [assignment_part]`'),nl,
+  write('  e.g. `assignment1` or `assignment2 part2`'),nl,
+  write('> '), read_line_to_codes(user_input, InputCodes),
+  atom_codes(InputAtom, InputCodes),
+  atomic_list_concat(InputList, ' ', InputAtom),
+  ( translate_input_options(InputList, Assignment_name, Part) -> true
+  ; read_in_choice(Assignment_name, Part)
+  ).
+
 :- dynamic
      user:prolog_file_type/2,
      user:file_search_path/2.
@@ -34,11 +53,7 @@ check_file(Prefix, File) :-
 :-  % parse command line arguments
     current_prolog_flag(argv, Args),
     % take first argument to be the name of the assignment folder
-    ( Args=['assignment1'|[]] -> Assignment_name='assignment1',Part=0
-    ; Args=['assignment2','part1'|[]] -> Assignment_name='oscar',Part=1
-    ; Args=['assignment2','part2'|[]] -> Assignment_name='wp',Part=2
-    ; Args=['assignment2','part3'|[]] -> Assignment_name='oscar',Part=3
-    ; Args=['assignment2','part4'|[]] -> Assignment_name='oscar',Part=4
+    ( translate_input_options(Args, Assignment_name, Part) -> true
     ; % missing argument, so display syntax and halt
        nl,
        write('Syntax:'),nl,
@@ -48,7 +63,9 @@ check_file(Prefix, File) :-
        write('or'),nl,
        write('e.g. ./ailp.pl assignment2 part1'),nl,
        nl,
-       halt(1)
+       write('~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+'),nl,
+       nl,
+       read_in_choice(Assignment_name, Part)
     ),
     assert(assignment(Assignment_name)),
     assert(sub_assignment(Part)).
