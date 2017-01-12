@@ -1,4 +1,4 @@
-#!/usr/bin/env swipl -f -q
+#!/usr/bin/env swipl
 /*
  *  ailp.pl
  *
