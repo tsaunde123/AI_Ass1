@@ -156,14 +156,14 @@ actor('William H. Macy').
 link('Barack Obama').
 link('Barton Fink').
 link('Coen brothers').
-link('Golden Globe Award for Best Supporting Actor - Motion Picture').
+%link('Golden Globe Award for Best Supporting Actor - Motion Picture').
 link('Hollywood Walk of Fame').
 link('Inside the Actors Studio').
 link('Manhattan').
 link('Miller\'s Crossing').
 %link('New York City').
 link('O Brother, Where Art Thou?').
-%link('Rotten Tomatoes').
+link('Rotten Tomatoes').
 link('Saturday Night Live').
 link('Screen Actors Guild Award').
 link('The Big Lebowski').
