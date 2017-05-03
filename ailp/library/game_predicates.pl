@@ -146,7 +146,7 @@ agent_ask_oracle(Agent, OID, Question, Answer) :-
   internal_topup(Emax),
   Cost is ceiling(Emax/10),
   ailp_internal(agent_energy(Agent,Energy)),
-  ( Energy>Cost -> agent_current_position(Agent,Pos),
+  ( Energy>=Cost -> agent_current_position(Agent,Pos),
                    map_adjacent(Pos, AdjPos, OID),
                    OID = o(_),
                    internal_object(OID, AdjPos, Options),
