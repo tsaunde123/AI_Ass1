@@ -14,3 +14,19 @@ q5_corner_move() :-
   ailp_show_move(p(1,4), p(4,4)),
   ailp_show_move(p(4,4), p(4,1)),
   ailp_show_move(p(4,1), P).
+
+q5_corner_move2() :-
+  ailp_grid_size(N),
+  ailp_start_position(P),
+  ailp_show_move(P, p(1,N)),
+  ailp_show_move(p(1,N), p(N,N)),
+  ailp_show_move(p(N,N), p(N,1)),
+  ailp_show_move(p(N,1), p(1,1)),
+  ailp_show_move(p(N,1), P).
+
+q6_spiral(PATH) :-
+  ailp_start_position(P),
+  next(P, PATH),
+  new_pos(p(X1,Y1), M, p(X2, Y2)),
+  ailp_show_move(p(X1,Y1), p(X2, Y2)),
+  
